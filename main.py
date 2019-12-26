@@ -2,7 +2,7 @@
 # Script that starts a game of tic-tac-toe
 #
 
-import tic-tac-toe
+from tic_tac_toe import tic_tac_toe
 
 
 # Start playing

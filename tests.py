@@ -2,7 +2,7 @@
 # Tests for individual functions in the tic-tac-toe module
 #
 
-import tic-tac-toe
+from tic_tac_toe import tic_tac_toe
 
 
 # Test initialization and printing
@@ -13,14 +13,8 @@ print(B.board)
 B.board[0][0] = 'O'
 B.print_board()
 
-# Test get_move and make_move
+# Test get_move
 print(B.get_move())
-
-B.make_move(0)
-B.print_board()
-B.make_move(1)
-B.print_board()
-
 
 # Test get_winner
 B = tic_tac_toe(3)
