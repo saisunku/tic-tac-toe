@@ -169,10 +169,94 @@ class tic_tac_toe():
 
 
 	def board_to_tuple(self, board):
-		"""Convert the given board which is a list to a tuple so that it can be hashed"""
+		"""Convert the given board, which is a list, to a tuple so that it can be hashed"""
 		return tuple(tuple(row) for row in board)
 
 
+	def get_sym_equiv(self, board):
+		"""Return a list of all boards that are symmetry-equivalent versions of the current board 
+		   including the current board"""
+		
+		sym_list = [board]
+
+		# There are six symmetry operations on a square: ROT90, ROT180, ROT270,
+		# MIR_VERT, MIR_HORIZ, MIR_DIAG (main diagonal), MIR_DIAG2 (other diagonal)
+
+		# MIR_VERT
+		MIR_VERT = [[None for j in range(self.board_sz)] for k in range(self.board_sz)]
+		for j in range(len(board)):
+			MIR_VERT[j] = board[-j-1]
+
+		sym_list.append(MIR_VERT)
+
+
+		# MIR_HORIZ
+		MIR_HORIZ = [[None for j in range(self.board_sz)] for k in range(self.board_sz)]
+		for j in range(len(board)):
+			for k in range(len(board)):
+				MIR_HORIZ[j][k] = board[j][-k-1]
+
+		sym_list.append(MIR_HORIZ)
+			
+
+		# MIR_DIAG (main diagonal)
+		MIR_DIAG = [[None for j in range(self.board_sz)] for k in range(self.board_sz)]
+		for j in range(len(board)):
+			for k in range(len(board)):
+				MIR_DIAG[j][k] = board[k][j]
+
+		sym_list.append(MIR_DIAG)
+		
+	
+		# MIR_DIAG2 (other diagonal)
+		MIR_DIAG2 = [[None for j in range(self.board_sz)] for k in range(self.board_sz)]
+		for j in range(len(board)):
+			for k in range(len(board)):
+				MIR_DIAG2[j][k] = board[-k-1][-j-1]
+
+		sym_list.append(MIR_DIAG2)
+		
+
+		# ROT90
+		ROT90 = [[None for j in range(self.board_sz)] for k in range(self.board_sz)]
+		for j in range(len(board)):
+			for k in range(len(board)):
+				ROT90[k][-j-1] = board[j][k]
+
+		sym_list.append(ROT90)
+	
+
+		# ROT180
+		ROT180 = [[None for j in range(self.board_sz)] for k in range(self.board_sz)]
+		for j in range(len(board)):
+			for k in range(len(board)):
+				ROT180[k][-j-1] = ROT90[j][k]
+
+		sym_list.append(ROT180)
+	
+
+		# ROT270
+		ROT270 = [[None for j in range(self.board_sz)] for k in range(self.board_sz)]
+		for j in range(len(board)):
+			for k in range(len(board)):
+				ROT270[k][-j-1] = ROT180[j][k]
+
+		sym_list.append(ROT270)
+	
+
+		# Check that four rotations give back the original board
+		# ROT360 = [[None for j in range(self.board_sz)] for k in range(self.board_sz)]
+		#
+		# for j in range(len(board)):
+		#	for k in range(len(board)):
+		#		ROT360[k][-j-1] = ROT270[j][k]
+		#
+		# assert ROT360 == board
+		
+		return sym_list
+
+
+	
 	### Player functions ###
 
 	def human_player(self, player):
@@ -245,6 +329,13 @@ class tic_tac_toe():
 			score = self.get_minimax_score(new_board, opponent)
 			scores.append(score)
 
+			# If the maximizing player gets a win or the minimizing player gets a win,
+			# we can stop evaluating the rest of the moves
+			if player == self.ai_player and score == 10:
+				break
+			if opponent == self.ai_player and score == -10:
+				break
+
 		if player == self.ai_player:
 			return max(scores)
 		else:
@@ -271,14 +362,19 @@ class tic_tac_toe():
 		for idx, move in enumerate(moves):
 			new_board = self.make_move_minimax(self.board, player, move[0], move[1])
 
-			# Check if board is in cache
-			if self.board_to_tuple(new_board) in self.minimax_cache:
-				scores[idx] = self.minimax_cache[self.board_to_tuple(new_board)]
+			# Check if board or its symmetry equivalent boards is in cache
+			sym_list = self.get_sym_equiv(new_board)
 
-			# If not, calculate the score
+			for sym_board in sym_list:
+				if self.board_to_tuple(sym_board) in self.minimax_cache:
+					scores[idx] = self.minimax_cache[self.board_to_tuple(sym_board)]
+					break
+
+			# If not, calculate the score and add new board and its symmetry-equivalents to cache
 			else:
 				scores[idx] = self.get_minimax_score(new_board, opponent)
-				self.minimax_cache[self.board_to_tuple(new_board)] = scores[idx]	# Add new board to cache
+				for sym_board in sym_list:
+					self.minimax_cache[self.board_to_tuple(sym_board)] = scores[idx]
 
 		# Find the move with the highest score
 		best_move_idx = scores.index(max(scores))
