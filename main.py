@@ -14,6 +14,7 @@ class tic_tac_toe():
 		self.board = [[None for j in range(board_sz)] for k in range(board_sz)]
 		self.cur_player = 'O'	# Start with player 'O'
 		self.ai_player = ai_player
+		self.minimax_cache = {}
 
 
 	def print_board(self, board = None):
@@ -167,6 +168,11 @@ class tic_tac_toe():
 		return not None in flattened_board
 
 
+	def board_to_tuple(self, board):
+		"""Convert the given board which is a list to a tuple so that it can be hashed"""
+		return tuple(tuple(row) for row in board)
+
+
 	### Player functions ###
 
 	def human_player(self, player):
@@ -264,7 +270,15 @@ class tic_tac_toe():
 
 		for idx, move in enumerate(moves):
 			new_board = self.make_move_minimax(self.board, player, move[0], move[1])
-			scores[idx] = self.get_minimax_score(new_board, opponent)
+
+			# Check if board is in cache
+			if self.board_to_tuple(new_board) in self.minimax_cache:
+				scores[idx] = self.minimax_cache[self.board_to_tuple(new_board)]
+
+			# If not, calculate the score
+			else:
+				scores[idx] = self.get_minimax_score(new_board, opponent)
+				self.minimax_cache[self.board_to_tuple(new_board)] = scores[idx]	# Add new board to cache
 
 		# Find the move with the highest score
 		best_move_idx = scores.index(max(scores))
@@ -354,10 +368,7 @@ while ai_opponent not in ['R', 'M']:
 
 B = tic_tac_toe(sz, ai_player = 'X')
 
-is_full = B.is_full()
-winner = B.get_winner()
-
-while not is_full and winner is None:
+while not B.is_full() and B.get_winner() is None:
 	B.print_board()
 	print('Player ' + str(B.cur_player))
 	if B.cur_player == 'O':
@@ -370,15 +381,12 @@ while not is_full and winner is None:
 
 	B.make_move(B.cur_player, x, y)
 
-	is_full = B.is_full()
-	winner = B.get_winner()
-
 print('')
-if is_full:
+if B.is_full():
 	print('Game ended in draw! Final board position:')
-if winner == 'O':
+if B.get_winner() == 'O':
 	print('Game ended! You won :) Final board position:')
-elif winner == 'X':
+elif B.get_winner() == 'X':
 	print('Game ended! AI won :( Final board position:')
 
 B.print_board()
