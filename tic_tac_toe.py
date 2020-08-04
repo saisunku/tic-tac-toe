@@ -123,37 +123,35 @@ class tic_tac_toe():
 			else:
 				return None
 
+		possible_winners = []
+
 		# Check horizontally
 		for j in range(self.board_sz):
 			row = board[j]
-			to_return = return_winner(row)
-			if to_return is not None:
-				return to_return
+			possible_winners.append(row)
 
 		# Check vertically
 		for j in range(self.board_sz):
 			column = []
 			for k in range(self.board_sz):
 				column.append(board[k][j])
-			to_return = return_winner(column)
-			if to_return is not None:
-				return to_return
+			possible_winners.append(column)
 
 		# Check top-left--bottom-right diagonal
 		diag = []
 		for j in range(self.board_sz):
 			diag.append(board[j][j])
-		to_return = return_winner(diag)
-		if to_return is not None:
-			return to_return
+		possible_winners.append(diag)
 
 		# Check top-right--bottom-left diagonal
 		diag = []
 		for j in range(self.board_sz):
 			diag.append(board[j][-j-1])
-		to_return = return_winner(diag)
-		if to_return is not None:
-			return to_return
+		possible_winners.append(diag)
+
+		for pos_winner in possible_winners:
+			winner = return_winner(pos_winner)
+			if winner: return winner
 
 		# No winner
 		return None
@@ -277,11 +275,8 @@ class tic_tac_toe():
 		"""Randomly select and return the coordinates of an available square"""
 
 		flattened_board = [char for row in self.board for char in row]
-		avail_sqr = []	# List that contains the indices of available squares
-		for idx, sqr in enumerate(flattened_board):
-			if sqr == None:
-				avail_sqr.append(idx)
-		
+		avail_sqr = [idx for (idx, sqr) in enumerate(flattened_board) if not sqr]
+	
 		rand_idx = random.randrange(len(avail_sqr))
 		rand_sqr = avail_sqr[rand_idx]	# Index of the chosen square
 
@@ -293,41 +288,49 @@ class tic_tac_toe():
 
 
 	def get_minimax_score(self, board, player):
-		"""Returns the minimax score for the given board position for the given player"""
+		"""Returns the minimax score and the best move for a given board position and player"""
 		
 		# If there is a winner return the score
 		winner = self.get_winner(board)
-		if winner is not None:
+		if winner:
 			if winner == self.ai_player: 
-				return 10
+				return 10, None
 			else:
-				return -10
+				return -10, None
 
 		# If board is full and there is no winner, it's a draw
 		if self.is_full(board):
-			return 0
+			return 0, None
 
 		# No winner and not a draw, so get all legal moves which is all the empty squares
-		moves = []
-		for x in range(self.board_sz):
-			for y in range(self.board_sz):
-				if board[y][x] == None:
-					moves.append([x, y])
+		moves = [[x, y] for x in range(self.board_sz) for y in range(self.board_sz) if not board[y][x]]
 
 		# Get scores for all the moves
 		scores = []
 		for move in moves:
 			new_board = self.make_move_minimax(board, player, move[0], move[1])
-			# self.print_board(new_board)
 
 			opponent = ''
 			if player == 'X':
 				opponent = 'O'
 			else:
 				opponent = 'X'
+			
+			# Check if board or its symmetry equivalent boards is in cache
+			sym_list = self.get_sym_equiv(new_board)
 
-			score = self.get_minimax_score(new_board, opponent)
-			scores.append(score)
+			for sym_board in sym_list:
+				if self.board_to_tuple(sym_board) in self.minimax_cache:
+					score = self.minimax_cache[self.board_to_tuple(sym_board)]
+					scores.append(score)
+					break
+
+			# If not, calculate the score and add new board and its symmetry-equivalents to cache
+			else:
+				score = self.get_minimax_score(new_board, opponent)[0]
+				scores.append(score)
+				for sym_board in sym_list:
+					self.minimax_cache[self.board_to_tuple(sym_board)] = scores[-1]
 
 			# If the maximizing player gets a win or the minimizing player gets a win,
 			# we can stop evaluating the rest of the moves
@@ -337,48 +340,14 @@ class tic_tac_toe():
 				break
 
 		if player == self.ai_player:
-			return max(scores)
+			return max(scores), moves[scores.index(max(scores))]
 		else:
-			return min(scores)
+			return min(scores), moves[scores.index(min(scores))]
 
 
 	def minimax(self, player):
-		"""Minimax algorithm for tic-tac-toe"""
+		"""Wrapper function for get_minimax_score which returns the best move"""
 
-		# Get valid moves from the game board
-		moves = []
-		for x in range(self.board_sz):
-			for y in range(self.board_sz):
-				if self.board[y][x] == None:
-					moves.append([x, y])
+		_, best_move = self.get_minimax_score(self.board, player)
 
-		# Make each move and calculate score
-		scores = [0 for j in range(len(moves))]
-		if player == 'X':
-			opponent = 'O'
-		else:
-			opponent = 'X'
-
-		for idx, move in enumerate(moves):
-			new_board = self.make_move_minimax(self.board, player, move[0], move[1])
-
-			# Check if board or its symmetry equivalent boards is in cache
-			sym_list = self.get_sym_equiv(new_board)
-
-			for sym_board in sym_list:
-				if self.board_to_tuple(sym_board) in self.minimax_cache:
-					scores[idx] = self.minimax_cache[self.board_to_tuple(sym_board)]
-					break
-
-			# If not, calculate the score and add new board and its symmetry-equivalents to cache
-			else:
-				scores[idx] = self.get_minimax_score(new_board, opponent)
-				for sym_board in sym_list:
-					self.minimax_cache[self.board_to_tuple(sym_board)] = scores[idx]
-
-		# Find the move with the highest score
-		best_move_idx = scores.index(max(scores))
-		
-		return moves[best_move_idx]
-
-
+		return best_move
