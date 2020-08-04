@@ -11,7 +11,7 @@ Based on Robert Heaton's website https://robertheaton.com/2018/10/09/programming
 		- Random, which randomly selects from one of the available squares
 		- Minimax, which uses the Minimax algorithm
 		  - Minimax algorithm includes caching and some pruning to improve speed
-  - `tests.py` are some tests for individual functions in the `tic_tac_toe` class
+  - `test_tic_tac_toe.py` unit tests for individual functions in the `tic_tac_toe` class using the `pytest` module
   - `main.py` runs a human vs computer (either Random or Minimax) game
 
 Even with caching and pruning, Minimax takes an unreasonably long time for board sizes greater than 3.
